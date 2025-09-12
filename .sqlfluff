@@ -1,0 +1,32 @@
+[sqlfluff]
+dialect = postgres
+templater = placeholder
+max_line_length = 80
+
+[sqlfluff:templater:placeholder]
+param_style = numeric_dollar
+
+# Disable most formatting rules to be more permissive with sqlc files
+[sqlfluff:rules:L001]
+ignore = true
+
+[sqlfluff:rules:L003]
+ignore = true
+
+[sqlfluff:rules:L009]
+ignore = true
+
+[sqlfluff:rules:L010]
+ignore = true
+
+[sqlfluff:rules:L034]
+ignore = true
+
+[sqlfluff:rules:L036]
+ignore = true
+
+[sqlfluff:rules:L044]
+ignore = true
+
+[sqlfluff:rules:L048]
+ignore = true
