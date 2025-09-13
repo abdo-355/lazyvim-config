@@ -1,0 +1,299 @@
+{
+  "error_check": {
+    "prefix": "iferr",
+    "body": ["if err != nil {", "\treturn $1", "}"],
+    "description": "Error check pattern"
+  },
+  "error_check_with_log": {
+    "prefix": "iferrlog",
+    "body": [
+      "if err != nil {",
+      "\tlog.Printf(\"Error: %v\", err)",
+      "\treturn $1",
+      "}"
+    ],
+    "description": "Error check with logging"
+  },
+  "http_handler": {
+    "prefix": "httphandler",
+    "body": [
+      "func ${1:handlerName}(w http.ResponseWriter, r *http.Request) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "HTTP handler function"
+  },
+  "http_middleware": {
+    "prefix": "middleware",
+    "body": [
+      "func ${1:middlewareName}(next http.Handler) http.Handler {",
+      "\treturn http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {",
+      "\t\t$0",
+      "\t\tnext.ServeHTTP(w, r)",
+      "\t})",
+      "}"
+    ],
+    "description": "HTTP middleware function"
+  },
+  "goroutine": {
+    "prefix": "go",
+    "body": ["go func() {", "\t$0", "}()"],
+    "description": "Goroutine with anonymous function"
+  },
+  "goroutine_with_recovery": {
+    "prefix": "gorecover",
+    "body": [
+      "go func() {",
+      "\tdefer func() {",
+      "\t\tif r := recover(); r != nil {",
+      "\t\t\tlog.Printf(\"Panic recovered: %v\", r)",
+      "\t\t}",
+      "\t}()",
+      "\t$0",
+      "}()"
+    ],
+    "description": "Goroutine with panic recovery"
+  },
+  "context_with_timeout": {
+    "prefix": "ctx",
+    "body": [
+      "ctx, cancel := context.WithTimeout(context.Background(), ${1:5*time.Second})",
+      "defer cancel()",
+      "$0"
+    ],
+    "description": "Context with timeout"
+  },
+  "context_with_cancel": {
+    "prefix": "ctxcancel",
+    "body": [
+      "ctx, cancel := context.WithCancel(context.Background())",
+      "defer cancel()",
+      "$0"
+    ],
+    "description": "Context with cancel"
+  },
+  "struct_with_json_tags": {
+    "prefix": "struct",
+    "body": [
+      "type ${1:StructName} struct {",
+      "\t${2:Field} ${3:string} `json:\"${4:field}\"`",
+      "}"
+    ],
+    "description": "Struct with JSON tags"
+  },
+  "interface": {
+    "prefix": "interface",
+    "body": [
+      "type ${1:InterfaceName} interface {",
+      "\t${2:Method}(${3:params}) ${4:returnType}",
+      "}"
+    ],
+    "description": "Interface definition"
+  },
+  "method_receiver": {
+    "prefix": "method",
+    "body": [
+      "func (${1:receiver} *${2:Type}) ${3:MethodName}(${4:params}) ${5:returnType} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Method with pointer receiver"
+  },
+  "method_value_receiver": {
+    "prefix": "methodv",
+    "body": [
+      "func (${1:receiver} ${2:Type}) ${3:MethodName}(${4:params}) ${5:returnType} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Method with value receiver"
+  },
+  "switch_statement": {
+    "prefix": "switch",
+    "body": [
+      "switch ${1:value} {",
+      "case ${2:case1}:",
+      "\t$3",
+      "case ${4:case2}:",
+      "\t$5",
+      "default:",
+      "\t$0",
+      "}"
+    ],
+    "description": "Switch statement"
+  },
+  "type_switch": {
+    "prefix": "typeswitch",
+    "body": [
+      "switch v := ${1:value}.(type) {",
+      "case ${2:Type1}:",
+      "\t$3",
+      "case ${4:Type2}:",
+      "\t$5",
+      "default:",
+      "\t$0",
+      "}"
+    ],
+    "description": "Type switch statement"
+  },
+  "select_statement": {
+    "prefix": "select",
+    "body": [
+      "select {",
+      "case ${1:case1}:",
+      "\t$2",
+      "case ${3:case2}:",
+      "\t$4",
+      "default:",
+      "\t$0",
+      "}"
+    ],
+    "description": "Select statement"
+  },
+  "channel_send": {
+    "prefix": "chansend",
+    "body": [
+      "select {",
+      "case ${1:channel} <- ${2:value}:",
+      "\t$3",
+      "case <-time.After(${4:timeout}):",
+      "\t$0",
+      "}"
+    ],
+    "description": "Channel send with timeout"
+  },
+  "channel_receive": {
+    "prefix": "chanrecv",
+    "body": [
+      "select {",
+      "case ${1:value} := <-${2:channel}:",
+      "\t$3",
+      "case <-time.After(${4:timeout}):",
+      "\t$0",
+      "}"
+    ],
+    "description": "Channel receive with timeout"
+  },
+  "defer_statement": {
+    "prefix": "defer",
+    "body": ["defer func() {", "\t$0", "}()"],
+    "description": "Defer statement"
+  },
+  "defer_close": {
+    "prefix": "deferclose",
+    "body": ["defer ${1:resource}.Close()"],
+    "description": "Defer close statement"
+  },
+  "json_marshal": {
+    "prefix": "jsonmarshal",
+    "body": [
+      "data, err := json.Marshal(${1:value})",
+      "if err != nil {",
+      "\treturn err",
+      "}",
+      "$0"
+    ],
+    "description": "JSON marshal with error handling"
+  },
+  "json_unmarshal": {
+    "prefix": "jsonunmarshal",
+    "body": [
+      "var ${1:result} ${2:Type}",
+      "err := json.Unmarshal(${3:data}, &${1:result})",
+      "if err != nil {",
+      "\treturn err",
+      "}",
+      "$0"
+    ],
+    "description": "JSON unmarshal with error handling"
+  },
+  "file_read": {
+    "prefix": "readfile",
+    "body": [
+      "data, err := os.ReadFile(${1:filename})",
+      "if err != nil {",
+      "\treturn err",
+      "}",
+      "$0"
+    ],
+    "description": "Read file with error handling"
+  },
+  "file_write": {
+    "prefix": "writefile",
+    "body": [
+      "err := os.WriteFile(${1:filename}, ${2:data}, ${3:0644})",
+      "if err != nil {",
+      "\treturn err",
+      "}",
+      "$0"
+    ],
+    "description": "Write file with error handling"
+  },
+  "database_query": {
+    "prefix": "dbquery",
+    "body": [
+      "rows, err := ${1:db}.Query(${2:query}, ${3:args})",
+      "if err != nil {",
+      "\treturn err",
+      "}",
+      "defer rows.Close()",
+      "$0"
+    ],
+    "description": "Database query with error handling"
+  },
+  "database_exec": {
+    "prefix": "dbexec",
+    "body": [
+      "result, err := ${1:db}.Exec(${2:query}, ${3:args})",
+      "if err != nil {",
+      "\treturn err",
+      "}",
+      "$0"
+    ],
+    "description": "Database exec with error handling"
+  },
+  "test_function": {
+    "prefix": "test",
+    "body": ["func Test${1:FunctionName}(t *testing.T) {", "\t$0", "}"],
+    "description": "Test function"
+  },
+  "benchmark_function": {
+    "prefix": "bench",
+    "body": [
+      "func Benchmark${1:FunctionName}(b *testing.B) {",
+      "\tfor i := 0; i < b.N; i++ {",
+      "\t\t$0",
+      "\t}",
+      "}"
+    ],
+    "description": "Benchmark function"
+  },
+  "table_driven_test": {
+    "prefix": "tabletest",
+    "body": [
+      "func Test${1:FunctionName}(t *testing.T) {",
+      "\ttests := []struct {",
+      "\t\tname     string",
+      "\t\tinput    ${2:InputType}",
+      "\t\texpected ${3:ExpectedType}",
+      "\t}{",
+      "\t\t{",
+      "\t\t\tname:     \"${4:test case}\",",
+      "\t\t\tinput:    ${5:input},",
+      "\t\t\texpected: ${6:expected},",
+      "\t\t},",
+      "\t}",
+      "\t",
+      "\tfor _, tt := range tests {",
+      "\t\tt.Run(tt.name, func(t *testing.T) {",
+      "\t\t\tresult := ${7:function}(tt.input)",
+      "\t\t\tif result != tt.expected {",
+      "\t\t\t\tt.Errorf(\"got %v, want %v\", result, tt.expected)",
+      "\t\t\t}",
+      "\t\t})",
+      "\t}",
+      "}"
+    ],
+    "description": "Table-driven test"
+  }
+}

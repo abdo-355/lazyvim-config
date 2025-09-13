@@ -19,6 +19,7 @@ vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
   spec = {
     { "LazyVim/LazyVim", import = "lazyvim.plugins" }, -- LazyVim core and defaults [10][19]
+ { import = "lazyvim.plugins.extras.coding.luasnip" },
     { import = "plugins" }, -- your own plugin specs folder [6][10]
     {
       "kdheepak/lazygit.nvim", -- Lazygit integration
