@@ -1,32 +1,39 @@
 [sqlfluff]
 dialect = postgres
 templater = placeholder
-max_line_length = 80
+max_line_length = 120
 
 [sqlfluff:templater:placeholder]
 param_style = numeric_dollar
 
-# Disable most formatting rules to be more permissive with sqlc files
-[sqlfluff:rules:L001]
+[sqlfluff:indentation]
+tab_space_size = 2
+indent_unit = space
+hanging_indents = false
+
+# Configure for more compact formatting per user preference
+[sqlfluff:layout:type:comma]
+line_position = trailing
+spacing_before = touch
+
+[sqlfluff:rules:layout.select_targets]
+wildcard_policy = single
+
+# Allow more compact formatting
+[sqlfluff:rules:layout.long_lines]
+ignore_comment_lines = true
+ignore_comment_clauses = true
+
+# Keep some basic rules but make them less strict
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+
+# Disable overly strict rules for sqlc compatibility
+[sqlfluff:rules:ambiguous.column_count]
 ignore = true
 
-[sqlfluff:rules:L003]
-ignore = true
-
-[sqlfluff:rules:L009]
-ignore = true
-
-[sqlfluff:rules:L010]
-ignore = true
-
-[sqlfluff:rules:L034]
-ignore = true
-
-[sqlfluff:rules:L036]
-ignore = true
-
-[sqlfluff:rules:L044]
-ignore = true
-
-[sqlfluff:rules:L048]
+[sqlfluff:rules:structure.column_order]
 ignore = true

@@ -14,8 +14,9 @@ return {
       -- SQLFluff formatter (primary choice)
       opts.formatters.sqlfluff = {
         command = "sqlfluff",
-        args = { "format", "--dialect=postgres", "--config", vim.fn.expand("~/.config/nvim/.sqlfluff"), "-" },
+        args = { "format", "--dialect", "postgres", "-" },
         stdin = true,
+        cwd = function() return vim.fn.expand("~/.config/nvim") end,
       }
       
       -- pg_format formatter (sqlc-friendly)
