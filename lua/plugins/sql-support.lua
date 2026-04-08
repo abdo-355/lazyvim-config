@@ -1,97 +1,96 @@
+local sql_ft = { "sql", "pgsql" }
+local sqlfluff_config = vim.fn.stdpath("config") .. "/.sqlfluff"
+
+local function add_unique(list, value)
+  if not vim.tbl_contains(list, value) then
+    table.insert(list, value)
+  end
+end
+
+local excluded_rules = {
+  LT01 = true,
+  LT02 = true,
+  LT04 = true,
+  LT05 = true,
+  LT06 = true,
+  LT07 = true,
+  LT08 = true,
+  LT09 = true,
+  LT10 = true,
+  LT11 = true,
+  LT12 = true,
+  LT13 = true,
+  LT14 = true,
+  LT15 = true,
+  AM04 = true,
+  CP01 = true,
+}
+
 return {
-  -- Treesitter configuration for SQL syntax highlighting
   {
     "nvim-treesitter/nvim-treesitter",
+    optional = true,
     opts = function(_, opts)
       opts.ensure_installed = opts.ensure_installed or {}
-      vim.list_extend(opts.ensure_installed, { "sql" })
+      add_unique(opts.ensure_installed, "sql")
     end,
     init = function()
-      -- Set up filetype associations for SQL and sqlc files
       vim.filetype.add({
         extension = {
-          sql = "sql",
-          pgsql = "pgsql", 
-          sqlc = "sql", -- sqlc query files use SQL syntax
+          pgsql = "pgsql",
+          sqlc = "sql",
         },
         pattern = {
-          [".*%.sql"] = "sql",
+          [".*queries.*%.sql"] = "sql",
           [".*%.pgsql"] = "pgsql",
-          ["query%.sql"] = "sql", -- common sqlc pattern
-          [".*queries.*%.sql"] = "sql", -- sqlc queries directory pattern
+          ["query%.sql"] = "sql",
         },
       })
     end,
   },
-
-  -- SQL Language Server disabled for now due to sqlc placeholder compatibility issues
-  -- The sql-language-server doesn't properly handle PostgreSQL $1, $2, etc. placeholders
-  -- You can re-enable this later if you find a better SQL LSP that supports sqlc
-
-  -- Linting configuration with nvim-lint
   {
-    "mfussenegger/nvim-lint", 
+    "mason-org/mason.nvim",
+    optional = true,
     opts = function(_, opts)
-      opts.linters_by_ft = opts.linters_by_ft or {}
-      -- Enable sqlfluff linting for SQL files with improved configuration
-      opts.linters_by_ft.sql = { "sqlfluff" }
-      opts.linters_by_ft.pgsql = { "sqlfluff" }
-      
+      opts.ensure_installed = opts.ensure_installed or {}
+      add_unique(opts.ensure_installed, "sqlfluff")
+    end,
+  },
+  {
+    "mfussenegger/nvim-lint",
+    optional = true,
+    opts = function(_, opts)
       opts.linters = opts.linters or {}
-      opts.linters.sqlfluff = {
+      opts.linters_by_ft = opts.linters_by_ft or {}
+
+      opts.linters.sqlfluff_postgres = {
         cmd = "sqlfluff",
-        args = { 
+        args = {
           "lint",
           "--format=json",
           "--dialect=postgres",
-          "--config", vim.fn.expand("~/.config/.sqlfluff"),
+          "--config",
+          sqlfluff_config,
           "-",
         },
         stdin = true,
         stream = "stdout",
         ignore_exitcode = true,
-        parser = function(output, bufnr)
+        parser = function(output)
           local diagnostics = {}
           local ok, decoded = pcall(vim.json.decode, output)
-          if not ok or not decoded then
+          if not ok or type(decoded) ~= "table" then
             return diagnostics
           end
 
           for _, item in ipairs(decoded) do
-            -- Only process violations for stdin (current buffer)
             if item.filepath == "stdin" and item.violations then
               for _, violation in ipairs(item.violations) do
-                -- Use 0-based line numbers for Neovim
-                local start_lnum = math.max(0, (violation.start_line_no or 1) - 1)
-                local start_col = math.max(0, (violation.start_line_pos or 1) - 1)
-                local end_lnum = math.max(0, (violation.end_line_no or violation.start_line_no or 1) - 1)
-                local end_col = math.max(0, (violation.end_line_pos or violation.start_line_pos or 1) - 1)
-
-                -- Skip diagnostics that are disabled in config or not useful
                 local code = violation.code or ""
-                local excluded_rules = {
-                  "LT01", "LT02", "LT04", "LT05", "LT06", "LT07", "LT08", "LT09", "LT10", 
-                  "LT11", "LT12", "LT13", "LT14", "LT15", "AM04", "CP01"
-                }
-                
-                local should_skip = false
-                for _, rule in ipairs(excluded_rules) do
-                  if code:match("^" .. rule) then
-                    should_skip = true
-                    break
-                  end
-                end
-                
-                -- Also skip spacing and layout issues that conflict with formatters
-                if code:match("^LT01") or code:match("^LT14") or code:match("^LT09") or code:match("^AM04") or code:match("^CP01") then
-                  should_skip = true
-                end
-                
-                if should_skip then
+                if excluded_rules[code] then
                   goto continue
                 end
 
-                -- Determine severity based on rule type
                 local severity = vim.diagnostic.severity.WARN
                 if code:match("^L") then
                   severity = vim.diagnostic.severity.INFO
@@ -100,15 +99,16 @@ return {
                 end
 
                 table.insert(diagnostics, {
-                  lnum = start_lnum,
-                  col = start_col,
-                  end_lnum = end_lnum,
-                  end_col = end_col,
+                  lnum = math.max(0, (violation.start_line_no or 1) - 1),
+                  col = math.max(0, (violation.start_line_pos or 1) - 1),
+                  end_lnum = math.max(0, (violation.end_line_no or violation.start_line_no or 1) - 1),
+                  end_col = math.max(0, (violation.end_line_pos or violation.start_line_pos or 1) - 1),
                   severity = severity,
                   message = violation.description or "SQL issue",
-                  code = violation.code,
+                  code = code,
                   source = "sqlfluff",
                 })
+
                 ::continue::
               end
             end
@@ -117,6 +117,36 @@ return {
           return diagnostics
         end,
       }
+
+      for _, ft in ipairs(sql_ft) do
+        opts.linters_by_ft[ft] = opts.linters_by_ft[ft] or {}
+        add_unique(opts.linters_by_ft[ft], "sqlfluff_postgres")
+      end
+    end,
+  },
+  {
+    "stevearc/conform.nvim",
+    optional = true,
+    opts = function(_, opts)
+      opts.formatters = opts.formatters or {}
+      opts.formatters_by_ft = opts.formatters_by_ft or {}
+
+      opts.formatters.sqlfluff_postgres = {
+        command = "sqlfluff",
+        args = {
+          "format",
+          "--dialect=postgres",
+          "--config",
+          sqlfluff_config,
+          "-",
+        },
+        stdin = true,
+      }
+
+      for _, ft in ipairs(sql_ft) do
+        opts.formatters_by_ft[ft] = opts.formatters_by_ft[ft] or {}
+        table.insert(opts.formatters_by_ft[ft], 1, "sqlfluff_postgres")
+      end
     end,
   },
 }

@@ -3,9 +3,7 @@
   "contributes": {
     "snippets": [
       {
-        "language": [
-          "go"
-        ],
+        "language": ["go"],
         "path": "./go.json"
       }
     ]

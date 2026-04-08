@@ -1,11 +1,59 @@
+local function current_path()
+  local name = vim.api.nvim_buf_get_name(0)
+  if name ~= "" then
+    return name
+  end
+  return vim.uv.cwd()
+end
+
+local function find_project_root()
+  local found = vim.fs.find({ "sqlc.yaml", "sqlc.yml", "go.work", "go.mod" }, {
+    path = current_path(),
+    upward = true,
+  })
+  if found and found[1] then
+    return vim.fn.fnamemodify(found[1], ":h")
+  end
+  return vim.fn.fnamemodify(current_path(), ":h")
+end
+
+local function run_sqlc(restart_lsp)
+  if vim.fn.executable("sqlc") ~= 1 then
+    vim.notify("sqlc is not installed or not in PATH", vim.log.levels.ERROR)
+    return
+  end
+
+  local root = find_project_root()
+  local job = vim.fn.jobstart({ "sqlc", "generate" }, {
+    cwd = root,
+    on_exit = function(_, code)
+      vim.schedule(function()
+        if code == 0 then
+          vim.notify("sqlc generate completed", vim.log.levels.INFO)
+          if restart_lsp then
+            vim.cmd("LspRestart")
+          end
+        else
+          vim.notify("sqlc generate failed with exit code: " .. code, vim.log.levels.ERROR)
+        end
+      end)
+    end,
+  })
+
+  if job <= 0 then
+    vim.notify("failed to start sqlc generate", vim.log.levels.ERROR)
+    return
+  end
+
+  vim.notify("running sqlc generate...", vim.log.levels.INFO)
+end
+
 return {
-  -- Configure gopls with file watching capabilities for sqlc support
   {
     "neovim/nvim-lspconfig",
     opts = {
       servers = {
         gopls = {
-          -- Enable file watching capabilities to detect sqlc generated files
           capabilities = {
             workspace = {
               didChangeWatchedFiles = {
@@ -13,84 +61,29 @@ return {
               },
             },
           },
-          -- Additional gopls settings for better sqlc support
           settings = {
             gopls = {
-              -- Enable more features that help with generated code
               analyses = {
-                unusedparams = true,
                 shadow = true,
-                fieldalignment = false, -- Can be noisy with generated code
+                fieldalignment = false,
               },
-              -- Watch for changes in generated files
               experimentalPostfixCompletions = true,
-              -- Better support for generated code
-              gofumpt = true,
-              usePlaceholders = true,
             },
           },
         },
       },
     },
   },
-
-  -- Create custom commands and autocmds for sqlc integration
-  {
-    "nvim-lua/plenary.nvim", -- Ensure plenary is available for job control
-  },
-
-  -- Custom sqlc commands
   {
     "LazyVim/LazyVim",
     init = function()
-      -- Register custom commands
       vim.api.nvim_create_user_command("SqlcGenerate", function()
-        -- Use job control for better async handling
-        local job = vim.fn.jobstart("sqlc generate", {
-          on_exit = function(_, exit_code)
-            if exit_code == 0 then
-              vim.schedule(function()
-                vim.notify("sqlc generate completed successfully", vim.log.levels.INFO)
-                -- Restart LSP to pick up generated files
-                vim.cmd("LspRestart")
-              end)
-            else
-              vim.schedule(function()
-                vim.notify("sqlc generate failed with exit code: " .. exit_code, vim.log.levels.ERROR)
-              end)
-            end
-          end,
-        })
-        
-        if job == 0 then
-          vim.notify("Failed to start sqlc generate job", vim.log.levels.ERROR)
-        else
-          vim.notify("Running sqlc generate...", vim.log.levels.INFO)
-        end
+        run_sqlc(true)
       end, { desc = "Run sqlc generate and restart LSP" })
-      
-      -- Alternative command that just runs sqlc without LSP restart
+
       vim.api.nvim_create_user_command("SqlcGen", function()
-        local job = vim.fn.jobstart("sqlc generate", {
-          on_exit = function(_, exit_code)
-            if exit_code == 0 then
-              vim.schedule(function()
-                vim.notify("sqlc generate completed successfully", vim.log.levels.INFO)
-              end)
-            else
-              vim.schedule(function()
-                vim.notify("sqlc generate failed with exit code: " .. exit_code, vim.log.levels.ERROR)
-              end)
-            end
-          end,
-        })
-        
-        if job == 0 then
-          vim.notify("Failed to start sqlc generate job", vim.log.levels.ERROR)
-        else
-          vim.notify("Running sqlc generate...", vim.log.levels.INFO)
-        end
-      end, { desc = "Run sqlc generate only" })
+        run_sqlc(false)
+      end, { desc = "Run sqlc generate" })
     end,
   },
 }
